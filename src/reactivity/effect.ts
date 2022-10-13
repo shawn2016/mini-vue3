@@ -3,8 +3,13 @@ import { extend } from "../shared";
 /*
  * @Date: 2022-10-12 17:49:32
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-13 17:52:45
+ * @LastEditTime: 2022-10-13 18:53:17
  */
+
+// 保存effect
+let activeEffect = void 0;
+let shouldTrack = false;
+
 class ReactiveEffect {
   private _fn: any;
   public deps = [];
@@ -14,8 +19,31 @@ class ReactiveEffect {
     this._fn = fn;
   }
   run() {
+    // 运行 run 的时候，可以控制 要不要执行后续收集依赖的一步
+    // 目前来看的话，只要执行了 fn 那么就默认执行了收集依赖
+    // 这里就需要控制了
+
+    // 是不是收集依赖的变量
+
+    // 执行 fn  但是不收集依赖
+    if (!this.active) {
+      return this._fn();
+    }
+
+    // 执行 fn  收集依赖
+    // 可以开始收集依赖了
+    shouldTrack = true;
+
+    // 执行的时候给全局的 activeEffect 赋值
+    // 利用全局属性来获取当前的 effect
     activeEffect = this as any;
-    return this._fn();
+    // 执行用户传入的 fn
+    const result = this._fn();
+    // 重置
+    shouldTrack = false;
+    activeEffect = undefined;
+
+    return result;
   }
   stop() {
     if (this.active) {
@@ -27,10 +55,15 @@ class ReactiveEffect {
     }
   }
 }
+
+export function isTracking() {
+  return shouldTrack && activeEffect !== undefined;
+}
 function cleanupEffect(effect) {
   effect.deps.forEach((dep: any) => {
     dep.delete(effect);
   });
+  effect.deps.length = 0;
 }
 const targetMap = new Map();
 export function track(target, key) {
@@ -48,9 +81,11 @@ export function track(target, key) {
     depsMap.set(key, dep);
   }
   if (!activeEffect) return;
-  dep.add(activeEffect);
-  // 反向收集deps，帮助stop清空
-  (activeEffect as any).deps.push(dep);
+  if (!dep.has(activeEffect)) {
+    dep.add(activeEffect);
+    // 反向收集deps，帮助stop清空
+    (activeEffect as any).deps.push(dep);
+  }
 }
 
 export function trigger(target, key) {
@@ -64,8 +99,6 @@ export function trigger(target, key) {
     }
   }
 }
-// 保存
-let activeEffect: any;
 export function effect(fn, options: any = {}) {
   const _effect = new ReactiveEffect(fn, options.scheduler);
   // _effect.onStop = options.onStop; // 下面的写法更加优雅
