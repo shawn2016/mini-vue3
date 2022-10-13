@@ -1,7 +1,7 @@
 <!--
  * @Date: 2022-10-12 14:51:59
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-13 18:55:41
+ * @LastEditTime: 2022-10-14 07:52:52
 -->
 # mini-vue
 ## 第五节实战课-setup环境-集成jest做单元测试-集成 ts
@@ -1000,6 +1000,151 @@ export function stop(runner) {
 
 ```
 
-## 第十三节实战课-
+## 第十三节实战课-实现 reactive 和 readonly 嵌套对象转换功能
+baseHandlers.ts
+
+```ts
+/*
+ * @Date: 2022-10-13 18:04:18
+ * @LastEditors: shawn
+ * @LastEditTime: 2022-10-14 07:47:25
+ */
+import { isObject } from "../shared";
+import { track, trigger } from "./effect";
+import { reactive, ReactiveFlags, readonly } from "./reactive";
+
+const get = createGetter();
+const set = createSetter();
+const readonlyGet = createGetter(true);
+export const mutableHandlers = {
+  get,
+  set,
+};
+
+export const readonlyHandlers = {
+  get: readonlyGet,
+  set(target, key) {
+    console.warn(
+      `Set operation on key "${String(key)}" failed: target is readonly.`,
+      target
+    );
+    return true;
+  },
+};
+
+function createGetter(isReadonly = false) {
+  return function get(target, key) {
+    if (key === ReactiveFlags.IS_REACTIVE) {
+      return !isReadonly;
+    } else if (key === ReactiveFlags.IS_READONLY) {
+      return isReadonly;
+    }
+
+    const res = Reflect.get(target, key);
+    //新增嵌套 看看res 是不是 object
+    if (isObject(res)) {
+      return isReadonly ? readonly(res) : reactive(res);
+    }
+    if (!isReadonly) {
+      //  TODO 依赖收集
+      track(target, key);
+    }
+    return res;
+  };
+}
+
+function createSetter() {
+  return function set(target, key, value) {
+    const res = Reflect.set(target, key, value);
+    //   TODO 触发依赖
+    trigger(target, key);
+    return res;
+  };
+}
+
+```
+
+readonly.spec.ts
+
+```ts
+import { isReadonly, readonly } from "../reactive";
+
+/*
+ * @Date: 2022-10-13 17:55:00
+ * @LastEditors: shawn
+ * @LastEditTime: 2022-10-14 07:46:48
+ */
+describe("readonly", () => {
+  // 不能 set
+  it("happy path", () => {
+    const original = {
+      foo: 1,
+      bar: {
+        baz: 2,
+      },
+    };
+    const wrapped = readonly(original);
+    expect(wrapped).not.toBe(original);
+    expect(wrapped.foo).toBe(1);
+    expect(isReadonly(wrapped)).toBe(true);
+    expect(isReadonly(original)).toBe(false);
+    // 新增嵌套
+    expect(isReadonly(wrapped.bar)).toBe(true);
+    expect(isReadonly(original.bar)).toBe(false);
+  });
+
+  it("当调用set的时候给一个警告", () => {
+    console.warn = jest.fn();
+    const user = readonly({
+      age: 10,
+    });
+    user.age = 11;
+    expect(console.warn).toBeCalled();
+  });
+});
+
+```
+reactive.spec.ts
+
+```ts
+/*
+ * @Date: 2022-10-12 18:01:42
+ * @LastEditors: shawn
+ * @LastEditTime: 2022-10-14 07:37:20
+ */
+import { isReactive, reactive } from "../reactive";
+
+describe("reactive", () => {
+  it("happy path", () => {
+    const original = {
+      foo: 1,
+    };
+    const observed = reactive(original);
+    expect(observed).not.toBe(original);
+    expect(observed.foo).toBe(1);
+    expect(isReactive(observed)).toBe(true);
+    expect(isReactive(original)).toBe(false);
+  });
+  it("nested reactive", () => {
+    const original = {
+      nested: {
+        foo: 1,
+      },
+      array: [
+        {
+          bar: 2,
+        },
+      ],
+    };
+    const observed = reactive(original);
+    expect(isReactive(observed.nested)).toBe(true);
+    expect(isReactive(observed.array)).toBe(true);
+    expect(isReactive(observed.array[0])).toBe(true);
+  });
+});
+
+```
+
+
 ## 第十四节实战课-
 ## 第十五节实战课-

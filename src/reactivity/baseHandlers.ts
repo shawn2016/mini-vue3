@@ -1,10 +1,11 @@
 /*
  * @Date: 2022-10-13 18:04:18
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-13 18:29:54
+ * @LastEditTime: 2022-10-14 07:47:25
  */
+import { isObject } from "../shared";
 import { track, trigger } from "./effect";
-import { ReactiveFlags } from "./reactive";
+import { reactive, ReactiveFlags, readonly } from "./reactive";
 
 const get = createGetter();
 const set = createSetter();
@@ -34,6 +35,10 @@ function createGetter(isReadonly = false) {
     }
 
     const res = Reflect.get(target, key);
+    //新增嵌套 看看res 是不是 object
+    if (isObject(res)) {
+      return isReadonly ? readonly(res) : reactive(res);
+    }
     if (!isReadonly) {
       //  TODO 依赖收集
       track(target, key);

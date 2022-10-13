@@ -3,7 +3,7 @@ import { isReadonly, readonly } from "../reactive";
 /*
  * @Date: 2022-10-13 17:55:00
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-13 18:28:38
+ * @LastEditTime: 2022-10-14 07:46:48
  */
 describe("readonly", () => {
   // 不能 set
@@ -19,6 +19,9 @@ describe("readonly", () => {
     expect(wrapped.foo).toBe(1);
     expect(isReadonly(wrapped)).toBe(true);
     expect(isReadonly(original)).toBe(false);
+    // 新增嵌套
+    expect(isReadonly(wrapped.bar)).toBe(true);
+    expect(isReadonly(original.bar)).toBe(false);
   });
 
   it("当调用set的时候给一个警告", () => {
