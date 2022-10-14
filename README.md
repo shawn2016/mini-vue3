@@ -1,7 +1,7 @@
 <!--
  * @Date: 2022-10-12 14:51:59
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-14 07:52:52
+ * @LastEditTime: 2022-10-14 08:15:18
 -->
 # mini-vue
 ## 第五节实战课-setup环境-集成jest做单元测试-集成 ts
@@ -1144,7 +1144,165 @@ describe("reactive", () => {
 });
 
 ```
+src/shared/index.ts
+```ts
+/*
+ * @Date: 2022-10-13 17:49:40
+ * @LastEditors: shawn
+ * @LastEditTime: 2022-10-14 07:49:38
+ */
+export const extend = Object.assign;
 
+export const isObject = (val) => {
+  return val !== null && typeof val === "object";
+};
 
-## 第十四节实战课-
+```
+
+## 第十四节实战课-实现 shallowReadonly 功能
+shallowReadonly.spec.ts
+```ts
+import { isReadonly, shallowReadonly } from "../reactive";
+
+/*
+ * @Date: 2022-10-14 07:57:37
+ * @LastEditors: shawn
+ * @LastEditTime: 2022-10-14 08:09:06
+ */
+describe("shallowReadonly", () => {
+  // shallowReadonly 值将最外层的对象转换成readonly
+  it("不需要将对象全部转换成响应式", () => {
+    const props = shallowReadonly({ n: { foo: 1 } });
+    expect(isReadonly(props)).toBe(true);
+    expect(isReadonly(props.n)).toBe(false);
+  });
+  it("当调用set的时候给一个警告", () => {
+    console.warn = jest.fn();
+    const user = shallowReadonly({
+      age: 10,
+    });
+    user.age = 11;
+    expect(console.warn).toBeCalled();
+  });
+});
+
+```
+baseHandlers.ts
+```ts
+/*
+ * @Date: 2022-10-13 18:04:18
+ * @LastEditors: shawn
+ * @LastEditTime: 2022-10-14 08:08:37
+ */
+import { extend, isObject } from "../shared";
+import { track, trigger } from "./effect";
+import { reactive, ReactiveFlags, readonly } from "./reactive";
+
+const get = createGetter();
+const set = createSetter();
+const readonlyGet = createGetter(true);
+const shallowReadonlyGet = createGetter(true, true);
+
+export const mutableHandlers = {
+  get,
+  set,
+};
+
+export const readonlyHandlers = {
+  get: readonlyGet,
+  set(target, key) {
+    console.warn(
+      `Set operation on key "${String(key)}" failed: target is readonly.`,
+      target
+    );
+    return true;
+  },
+};
+
+function createGetter(isReadonly = false, shallow = false) {
+  return function get(target, key) {
+    if (key === ReactiveFlags.IS_REACTIVE) {
+      return !isReadonly;
+    } else if (key === ReactiveFlags.IS_READONLY) {
+      return isReadonly;
+    }
+
+    const res = Reflect.get(target, key);
+
+    if (shallow) {
+      return res;
+    }
+    //新增嵌套 看看res 是不是 object
+    if (isObject(res)) {
+      return isReadonly ? readonly(res) : reactive(res);
+    }
+    if (!isReadonly) {
+      //  TODO 依赖收集
+      track(target, key);
+    }
+    return res;
+  };
+}
+
+function createSetter() {
+  return function set(target, key, value) {
+    const res = Reflect.set(target, key, value);
+    //   TODO 触发依赖
+    trigger(target, key);
+    return res;
+  };
+}
+
+export const shallowReadonlyHandlers = extend({}, readonlyHandlers, {
+  get: shallowReadonlyGet,
+});
+
+```
+reactive.ts
+```ts
+/*
+ * @Date: 2022-10-12 17:55:50
+ * @LastEditors: shawn
+ * @LastEditTime: 2022-10-14 08:02:25
+ */
+import {
+  mutableHandlers,
+  readonlyHandlers,
+  shallowReadonlyHandlers,
+} from "./baseHandlers";
+
+export const enum ReactiveFlags {
+  IS_REACTIVE = "__v_isReactive",
+  IS_READONLY = "__v_isReadonly",
+}
+
+export function reactive(raw) {
+  return createReactiveObject(raw, mutableHandlers);
+}
+
+export function readonly(raw) {
+  return createReactiveObject(raw, readonlyHandlers);
+}
+function createReactiveObject(raw: any, baseHandlers) {
+  return new Proxy(raw, baseHandlers);
+}
+
+export function isReadonly(value) {
+  return !!value[ReactiveFlags.IS_READONLY];
+}
+
+export function isReactive(value) {
+  // 如果 value 是 proxy 的话
+  // 会触发 get 操作，而在 createGetter 里面会判断
+  // 如果 value 是普通对象的话
+  // 那么会返回 undefined ，那么就需要转换成布尔值
+  return !!value[ReactiveFlags.IS_REACTIVE];
+}
+
+export function shallowReadonly(raw) {
+  return createReactiveObject(raw, shallowReadonlyHandlers);
+}
+
+```
+
 ## 第十五节实战课-

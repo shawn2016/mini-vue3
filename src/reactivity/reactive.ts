@@ -1,9 +1,13 @@
 /*
  * @Date: 2022-10-12 17:55:50
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-13 18:27:29
+ * @LastEditTime: 2022-10-14 08:02:25
  */
-import { mutableHandlers, readonlyHandlers } from "./baseHandlers";
+import {
+  mutableHandlers,
+  readonlyHandlers,
+  shallowReadonlyHandlers,
+} from "./baseHandlers";
 
 export const enum ReactiveFlags {
   IS_REACTIVE = "__v_isReactive",
@@ -31,4 +35,8 @@ export function isReactive(value) {
   // 如果 value 是普通对象的话
   // 那么会返回 undefined ，那么就需要转换成布尔值
   return !!value[ReactiveFlags.IS_REACTIVE];
+}
+
+export function shallowReadonly(raw) {
+  return createReactiveObject(raw, shallowReadonlyHandlers);
 }
