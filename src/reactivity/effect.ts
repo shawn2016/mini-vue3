@@ -3,7 +3,7 @@ import { extend } from "../shared";
 /*
  * @Date: 2022-10-12 17:49:32
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-13 18:53:17
+ * @LastEditTime: 2022-10-14 18:07:39
  */
 
 // 保存effect
@@ -81,6 +81,10 @@ export function track(target, key) {
     depsMap.set(key, dep);
   }
   if (!activeEffect) return;
+  trackEffects(dep);
+}
+
+export function trackEffects(dep) {
   if (!dep.has(activeEffect)) {
     dep.add(activeEffect);
     // 反向收集deps，帮助stop清空
@@ -91,6 +95,9 @@ export function track(target, key) {
 export function trigger(target, key) {
   let depsMap = targetMap.get(target);
   let dep = depsMap.get(key);
+  triggerEffects(dep);
+}
+export function triggerEffects(dep) {
   for (const effect of dep) {
     if (effect.scheduler) {
       effect.scheduler();
