@@ -1,9 +1,9 @@
 /*
  * @Date: 2022-10-12 18:01:42
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-14 07:37:20
+ * @LastEditTime: 2022-10-14 14:21:30
  */
-import { isReactive, reactive } from "../reactive";
+import { isProxy, isReactive, reactive } from "../reactive";
 
 describe("reactive", () => {
   it("happy path", () => {
@@ -15,6 +15,8 @@ describe("reactive", () => {
     expect(observed.foo).toBe(1);
     expect(isReactive(observed)).toBe(true);
     expect(isReactive(original)).toBe(false);
+    expect(isProxy(observed)).toBe(true);
+    expect(isProxy(original)).toBe(false);
   });
   it("nested reactive", () => {
     const original = {

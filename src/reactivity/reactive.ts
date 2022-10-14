@@ -1,7 +1,7 @@
 /*
  * @Date: 2022-10-12 17:55:50
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-14 08:02:25
+ * @LastEditTime: 2022-10-14 14:21:26
  */
 import {
   mutableHandlers,
@@ -39,4 +39,8 @@ export function isReactive(value) {
 
 export function shallowReadonly(raw) {
   return createReactiveObject(raw, shallowReadonlyHandlers);
+}
+
+export function isProxy(value) {
+  return isReactive(value) || isReadonly(value);
 }

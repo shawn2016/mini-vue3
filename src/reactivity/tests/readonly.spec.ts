@@ -1,9 +1,9 @@
-import { isReadonly, readonly } from "../reactive";
+import { isProxy, isReadonly, readonly } from "../reactive";
 
 /*
  * @Date: 2022-10-13 17:55:00
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-14 07:46:48
+ * @LastEditTime: 2022-10-14 14:22:27
  */
 describe("readonly", () => {
   // 不能 set
@@ -22,6 +22,9 @@ describe("readonly", () => {
     // 新增嵌套
     expect(isReadonly(wrapped.bar)).toBe(true);
     expect(isReadonly(original.bar)).toBe(false);
+    // 新增isProxy
+    expect(isProxy(wrapped)).toBe(true);
+    expect(isProxy(original)).toBe(false);
   });
 
   it("当调用set的时候给一个警告", () => {
