@@ -1,7 +1,7 @@
 /*
  * @Date: 2022-10-14 17:50:02
  * @LastEditors: shawn
- * @LastEditTime: 2022-10-14 18:21:51
+ * @LastEditTime: 2022-10-16 07:50:09
  */
 
 import { hasChanged, isObject } from "../shared";
@@ -12,6 +12,7 @@ export class RefImpl {
   private _value: any;
   private dep: Set<unknown>;
   private _rawValue: any;
+  public __v_isRef = true;
 
   constructor(value) {
     // 如果传入的是对象的话 需要包裹成reactive
@@ -55,4 +56,11 @@ function createRef(value) {
   const refImpl = new RefImpl(value);
 
   return refImpl;
+}
+export function isRef(ref) {
+  return !!ref.__v_isRef;
+}
+
+export function unRef(ref) {
+  return isRef(ref) ? ref.value : ref;
 }
